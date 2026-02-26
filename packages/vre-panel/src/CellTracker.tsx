@@ -80,6 +80,7 @@ export class CellTracker extends React.Component<IProps, IState> {
 
     async loadBaseImages() {
         try {
+            const begin_ts = performance.now()
             const baseImagesData = await requestAPI<any>(
               'containerizer/baseimagetags',
               { method: 'GET' }
@@ -89,9 +90,12 @@ export class CellTracker extends React.Component<IProps, IState> {
             const updatedBaseImages = Object.entries(baseImagesData).map(
               ([name, image]) => ({ name, image})
             )
-            console.log('updatedBaseImages');
-            console.log(updatedBaseImages);
             this.setState({baseImages: updatedBaseImages });
+
+            const end_ts = performance.now()
+            console.log(this.loadBaseImages.name + ' done in ' + (end_ts - begin_ts) + 'ms');
+            // console.log('updatedBaseImages');
+            // console.log(updatedBaseImages);
         } catch (error) {
             console.log(error);
         }
@@ -99,13 +103,13 @@ export class CellTracker extends React.Component<IProps, IState> {
 
 
     typesUpdate = async (event: React.ChangeEvent<{ name?: string; value: unknown; }>, port: string) => {
-        // await requestAPI<any>('containerizer/types', {
-        //     body: JSON.stringify({
-        //         port: port,
-        //         type: event.target.value
-        //     }),
-        //     method: 'POST'
-        // });
+        await requestAPI<any>('containerizer/types', {
+            body: JSON.stringify({
+                port: port,
+                type: event.target.value
+            }),
+            method: 'POST'
+        });
 
         let currTypeSelections = this.state.typeSelections
         currTypeSelections[port] = true
@@ -115,17 +119,17 @@ export class CellTracker extends React.Component<IProps, IState> {
             typeSelections: currTypeSelections,
             currentCell: currCurrentCell,
         })
-        console.log(`currentCell: ${JSON.stringify(this.state.currentCell)}`)
+        // console.log(`currentCell: ${JSON.stringify(this.state.currentCell)}`)
     };
 
     baseImageUpdate = async (value: any) => {
         console.log('value: '+value);
-        // await requestAPI<any>('containerizer/baseimage', {
-        //     body: JSON.stringify({
-        //         image: value
-        //     }),
-        //     method: 'POST'
-        // });
+        await requestAPI<any>('containerizer/baseimage', {
+            body: JSON.stringify({
+                image: value
+            }),
+            method: 'POST'
+        });
         this.state.currentCell.base_image = value
         this.setState({ baseImageSelected: true });
         console.log(`currentCell: ${JSON.stringify(this.state.currentCell)}`)
@@ -135,6 +139,8 @@ export class CellTracker extends React.Component<IProps, IState> {
         await this.loadBaseImages();
         const kernel = await this.getKernel()
         try {
+            const begin_ts = performance.now()
+
             this.setState({
                 loading: true,
                 extractorError: '',
@@ -149,7 +155,7 @@ export class CellTracker extends React.Component<IProps, IState> {
                 }),
                 method: 'POST'
             });
-            console.log(`Extracted cell: ${JSON.stringify(extractedCell)}`);
+
             this.setState({
                 currentCell: extractedCell,
                 loading: false,
@@ -171,6 +177,10 @@ export class CellTracker extends React.Component<IProps, IState> {
             this.setState({ typeSelections: typeSelections })
 
             this.cellPreviewRef.current.updateChart(extractedCell['chart_obj']);
+
+            const end_ts = performance.now()
+            console.log(`Extracted cell: ${JSON.stringify(extractedCell)}`);
+            console.log('extractor' + ' done in ' + (end_ts - begin_ts) + 'ms');
         } catch (error) {
             console.log(error);
             this.setState({

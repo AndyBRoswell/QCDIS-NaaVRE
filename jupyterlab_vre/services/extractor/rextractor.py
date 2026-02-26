@@ -6,12 +6,15 @@ import rpy2.rinterface as rinterface
 import rpy2.robjects as robjects
 import rpy2.robjects.packages as rpackages
 from rpy2.robjects.packages import importr
+from rpy2.robjects import conversion, default_converter
 
 from .extractor import Extractor
 
 
 # Create an R environment
 r_env = robjects.globalenv
+
+robject_converter = default_converter  # + conversion.localconverter(default_converter)
 
 # This R code is used to obtain all assignment variables (source https://adv-r.hadley.nz/expressions.html)
 r_env["result"] = robjects.r("""
@@ -123,6 +126,9 @@ class RExtractor(Extractor):
         super().__init__(notebook, cell_source)
 
     def __extract_imports(self, sources):
+        robjects.conversion.set_conversion(robject_converter)
+        renv = rpackages.importr('renv')
+
         imports = {}
         for s in sources:
             packages = []
@@ -138,7 +144,7 @@ class RExtractor(Extractor):
             with tempfile.NamedTemporaryFile(delete=False, suffix='.R') as tmp_file:
                 tmp_file.write(s.encode())
                 tmp_file.flush()
-                renv = rpackages.importr('renv')
+                # renv = rpackages.importr('renv')
                 function_list = renv.dependencies(tmp_file.name)
 
                 # transpose renv dependencies to readable dependencies

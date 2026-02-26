@@ -41,7 +41,9 @@ export class AddCellDialog extends React.Component<AddCellDialogProps, IState> {
             // const kernelObject = sessionContext?.session?.kernel; // https://jupyterlab.readthedocs.io/en/stable/api/interfaces/services.kernel.ikernelconnection-1.html#serversettings
             // const kernel = (await kernelObject.info).implementation;
 
-            console.log(`Submitting cell: ${JSON.stringify(this.props.cell)}`)
+            // console.log(`Submitting cell: ${JSON.stringify(this.props.cell)}`)
+            const begin_ts = performance.now()
+
             await requestAPI<any>('containerizer/addcell', {
                 // body: JSON.stringify({
                 //     kernel
@@ -52,6 +54,8 @@ export class AddCellDialog extends React.Component<AddCellDialogProps, IState> {
 
             this.setState({ loading: false });
 
+            const end_ts = performance.now()
+            console.log(this.createCell.name + ' done in ' + (end_ts - begin_ts) + 'ms');
         } catch (error) {
             console.log(error);
             alert('Error creating  cell : ' + String(error).replace('{"message": "Unknown HTTP Error"}', ''));
