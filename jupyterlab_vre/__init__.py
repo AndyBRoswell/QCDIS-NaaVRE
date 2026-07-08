@@ -1,6 +1,7 @@
 from notebook.utils import url_path_join
 
 from jupyterlab_vre.sdia.sdia_credentials import SDIACredentials
+from .BackendRelay import BackendRelay
 from ._version import __version__
 from .component_containerizer.handlers import ExtractorHandler, TypesHandler, BaseImageHandler, CellsHandler, \
     BaseImageTagsHandler
@@ -32,16 +33,33 @@ def load_jupyter_server_extension(lab_app):
          NotebookSeachHistoryHandler),
         (
         url_path_join(lab_app.web_app.settings['base_url'], r'/vre/notebooksearchrating'), NotebookSearchRatingHandler),
-        (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/extract'), ExtractorHandler),
-        (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/types'), TypesHandler),
-        (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/baseimage'), BaseImageHandler),
-        (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/addcell'), CellsHandler),
-        (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/baseimagetags'), BaseImageTagsHandler),
-        (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/catalog/cells/all'), CatalogGetAllHandler),
+        # (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/extract'), ExtractorHandler),
+        # (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/types'), TypesHandler),
+        # (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/baseimage'), BaseImageHandler),
+        # (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/addcell'), CellsHandler),
+        # (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/containerizer/baseimagetags'), BaseImageTagsHandler),
+        # (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/catalog/cells/all'), CatalogGetAllHandler),
         (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/expmanager/export'), ExportWorkflowHandler),
         (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/expmanager/execute'), ExecuteWorkflowHandler),
         (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/repositories/?'), RepositoriesHandler),
         (url_path_join(lab_app.web_app.settings['base_url'], r'/vre/registries/?'), RegistriesHandler)
+    ])
+    # switch to the common backend [VREPaaS]:
+    # - switch to the following handlers
+    # - packages/vre-panel/src:
+    # -- CellTracker.tsx:
+    # --- comment `await requestAPI<any>` in CellTracker.typesUpdate and CellTracker.baseImageUpdate [image and type selection done at front-end locally]
+    # - re-build [see https://github.com/QCDIS/NaaVRE]
+    base_url: str = lab_app.web_app.settings['base_url']
+    common_prefix: str = 'vre'
+    containerizer_prefix: str = 'containerizer'
+    lab_app.web_app.add_handlers(host_pattern, [
+        (url_path_join(base_url, fr'/{common_prefix}/{containerizer_prefix}/extract'), BackendRelay),
+        (url_path_join(base_url, fr'/{common_prefix}/{containerizer_prefix}/baseimagetags'), BackendRelay),
+        (url_path_join(base_url, fr'/{common_prefix}/{containerizer_prefix}/types'), BackendRelay),
+        (url_path_join(base_url, fr'/{common_prefix}/{containerizer_prefix}/baseimage'), BackendRelay),
+        (url_path_join(base_url, fr'/{common_prefix}/{containerizer_prefix}/addcell'), BackendRelay),
+        (url_path_join(base_url, fr'/{common_prefix}/catalog/cells/all'), BackendRelay),
     ])
 
     lab_app.log.info("Registered NaaVRRE extension at URL path /vre")

@@ -18,15 +18,25 @@ import distro
 import jsonschema
 import nbformat as nb
 import requests
+import requests.adapters
+import urllib3
 from github import Github
 from github.GithubException import UnknownObjectException, GithubException
 from jinja2 import Environment, PackageLoader
 from notebook.base.handlers import APIHandler
+from slugify import slugify
 from tornado import web
 
 from jupyterlab_vre.database.catalog import Catalog
-from jupyterlab_vre.services.containerizer.Rcontainerizer import Rcontainerizer
+from jupyterlab_vre.database.cell import Cell
 from jupyterlab_vre.services.extractor.extract_cell import extract_cell
+from jupyterlab_vre.services.containerizer.Rcontainerizer import Rcontainerizer
+from jupyterlab_vre.services.converter.converter import ConverterReactFlowChart
+from jupyterlab_vre.services.extractor.extractor import DummyExtractor
+from jupyterlab_vre.services.extractor.pyextractor import PyExtractor
+from jupyterlab_vre.services.extractor.rextractor import RExtractor
+from jupyterlab_vre.services.extractor.pyheaderextractor import PyHeaderExtractor
+from jupyterlab_vre.services.extractor.rheaderextractor import RHeaderExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +56,11 @@ github_url_repos = 'https://api.github.com/repos'
 github_workflow_file_name = 'build-push-docker.yml'
 cells_path = os.path.join(str(Path.home()), 'NaaVRE', 'cells')
 
+# customized requests.Session
+session = requests.Session()
+retry_adapter = requests.adapters.HTTPAdapter(max_retries=urllib3.Retry(total=5, status_forcelist=[500]))
+session.mount('http://', retry_adapter)
+session.mount('https://', retry_adapter)
 
 # code from https://stackoverflow.com/questions/552659/how-to-assign-a-git-sha1s-to-a-file-without-git
 def git_hash(contents):
@@ -53,6 +68,22 @@ def git_hash(contents):
     s.update(('blob %u\0' % len(contents)).encode('utf-8'))
     s.update(contents)
     return s.hexdigest()
+
+
+def extract_cell_by_index(notebook, cell_index):
+    new_nb = copy.deepcopy(notebook)
+    if cell_index < len(notebook.cells):
+        new_nb.cells = [notebook.cells[cell_index]]
+        return new_nb
+
+
+def set_notebook_kernel(notebook, kernel):
+    new_nb = copy.deepcopy(notebook)
+    # Replace kernel name in the notebook metadata
+    new_nb.metadata.kernelspec.name = kernel
+    new_nb.metadata.kernelspec.display_name = kernel
+    new_nb.metadata.kernelspec.language = kernel
+    return new_nb
 
 
 def query_registry_for_image(image_repo, image_name):
@@ -77,7 +108,8 @@ def query_registry_for_image(image_repo, image_name):
         headers = {
             "Authorization": f"Bearer {os.getenv('OCI_TOKEN')}",
             }
-    response = requests.get(url, headers=headers)
+    # response = requests.get(url, headers=headers)
+    response = session.get(url, headers=headers)
     if response.status_code == 200:
         return json.loads(response.content.decode('utf-8'))
     else:
@@ -159,7 +191,8 @@ class BaseImageTagsHandler(APIHandler):
         logger.debug(f'Base image tags URL: {url}')
         print(f'Base image tags URL: {url}')
         try:
-            res = requests.get(url)
+            # res = requests.get(url)
+            res = session.get(url)
             res.raise_for_status()
             dat = res.json()
         except (
@@ -550,6 +583,7 @@ def dispatch_github_workflow(owner,
                              image_version=None,
                              commit_hash = None):
     url = github_url_repos + '/' + owner + '/' + repository_name + '/actions/workflows/' + github_workflow_file_name + '/dispatches'
+    # resp = requests.post(
     if commit_hash:
         ref = commit_hash
     else:
@@ -585,8 +619,9 @@ def get_github_workflow_runs(owner=None, repository_name=None, t_utc=None, token
     headers = {'Accept': 'application/vnd.github.v3+json'}
     if token:
         headers['Authorization'] = 'Bearer ' + token
-    workflow_runs = requests.get(url=workflow_runs_url, verify=False,
-                                 headers=headers)
+    # workflow_runs = requests.get(url=workflow_runs_url, verify=False,
+    #                              headers=headers)
+    workflow_runs = session.get(url=workflow_runs_url, verify=False, headers=headers)
     if workflow_runs.status_code != 200:
         return None
     workflow_runs_json = json.loads(workflow_runs.text)
@@ -597,8 +632,9 @@ def get_github_workflow_jobs(jobs_url=None, token=None):
     headers = {'Accept': 'application/vnd.github.v3+json'}
     if token:
         headers['Authorization'] = 'Bearer ' + token
-    jobs = requests.get(url=jobs_url, verify=False,
-                        headers=headers)
+    # jobs = requests.get(url=jobs_url, verify=False,
+    #                     headers=headers)
+    jobs = session.get(url=jobs_url, verify=False, headers=headers)
     if jobs.status_code == 200:
         return json.loads(jobs.text)
     else:
@@ -621,7 +657,8 @@ def load_module_name_mapping():
     module_mapping_url = os.getenv('MODULE_MAPPING_URL')
     module_mapping = {}
     if module_mapping_url:
-        resp = requests.get(module_mapping_url)
+        # resp = requests.get(module_mapping_url)
+        resp = session.get(module_mapping_url)
         module_mapping = json.loads(resp.text)
     module_name_mapping_path = os.path.join(
         str(Path.home()), 'NaaVRE', 'module_name_mapping.json')

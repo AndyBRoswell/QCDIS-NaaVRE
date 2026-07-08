@@ -1,5 +1,4 @@
-
-import { requestAPI } from '@jupyter_vre/core';
+import {requestAPI, VRECell} from '@jupyter_vre/core';
 import { CircularProgress, styled, ThemeProvider } from '@material-ui/core';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { green } from '@mui/material/colors';
@@ -16,7 +15,8 @@ const CatalogBody = styled('div')({
 })
 
 interface AddCellDialogProps {
-    notebook: NotebookPanel,
+    notebook: NotebookPanel
+    cell: VRECell
     closeDialog: () => void
 }
 
@@ -24,19 +24,19 @@ interface IState {
     loading: boolean
 }
 
-const DefaultState: IState = {
+const State: IState = {
     loading: true
 }
 
 
 export class AddCellDialog extends React.Component<AddCellDialogProps, IState> {
 
-    state = DefaultState;
+    state = State;
 
     handleClose = () => {
         console.log('closing dialog');
         this.props.closeDialog();
-    }   
+    }
 
     componentDidMount(): void {
         this.createCell()
@@ -44,16 +44,24 @@ export class AddCellDialog extends React.Component<AddCellDialogProps, IState> {
 
     createCell = async () => {
         try {
-            const sessionContext = this.props.notebook.context.sessionContext;
-            const kernelObject = sessionContext?.session?.kernel; // https://jupyterlab.readthedocs.io/en/stable/api/interfaces/services.kernel.ikernelconnection-1.html#serversettings
-            const kernel = (await kernelObject.info).implementation;
+            // const sessionContext = this.props.notebook.context.sessionContext;
+            // const kernelObject = sessionContext?.session?.kernel; // https://jupyterlab.readthedocs.io/en/stable/api/interfaces/services.kernel.ikernelconnection-1.html#serversettings
+            // const kernel = (await kernelObject.info).implementation;
+
+            // console.log(`Submitting cell: ${JSON.stringify(this.props.cell)}`)
+            const begin_ts = performance.now()
+
             await requestAPI<any>('containerizer/addcell', {
-                body: JSON.stringify({
-                    kernel
-                }),
+                // body: JSON.stringify({
+                //     kernel
+                // }),
+                body: JSON.stringify(this.props.cell),
                 method: 'POST'
             });
             this.setState({ loading: false });
+
+            const end_ts = performance.now()
+            console.log('createCell' + ' done in ' + (end_ts - begin_ts) + 'ms');
         } catch (error) {
             console.log(error);
             alert('Error creating  cell : ' + String(error).replace('{"message": "Unknown HTTP Error"}', ''));
@@ -75,7 +83,7 @@ export class AddCellDialog extends React.Component<AddCellDialogProps, IState> {
                             <p className='cell-submit-text'>
                                 The cell has been successfully created!
                             </p>
-                            
+
                         </div>
                     </div>
                     ) :
