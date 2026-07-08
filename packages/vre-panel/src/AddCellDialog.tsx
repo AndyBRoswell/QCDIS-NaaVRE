@@ -55,7 +55,7 @@ export class AddCellDialog extends React.Component<AddCellDialogProps, IState> {
             this.setState({ loading: false });
 
             const end_ts = performance.now()
-            console.log(this.createCell.name + ' done in ' + (end_ts - begin_ts) + 'ms');
+            console.log('createCell' + ' done in ' + (end_ts - begin_ts) + 'ms');
         } catch (error) {
             console.log(error);
             alert('Error creating  cell : ' + String(error).replace('{"message": "Unknown HTTP Error"}', ''));

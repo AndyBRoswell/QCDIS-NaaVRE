@@ -103,13 +103,13 @@ export class CellTracker extends React.Component<IProps, IState> {
 
 
     typesUpdate = async (event: React.ChangeEvent<{ name?: string; value: unknown; }>, port: string) => {
-        await requestAPI<any>('containerizer/types', {
-            body: JSON.stringify({
-                port: port,
-                type: event.target.value
-            }),
-            method: 'POST'
-        });
+        // await requestAPI<any>('containerizer/types', {
+        //     body: JSON.stringify({
+        //         port: port,
+        //         type: event.target.value
+        //     }),
+        //     method: 'POST'
+        // });
 
         let currTypeSelections = this.state.typeSelections
         currTypeSelections[port] = true
@@ -123,16 +123,16 @@ export class CellTracker extends React.Component<IProps, IState> {
     };
 
     baseImageUpdate = async (value: any) => {
-        console.log('value: '+value);
-        await requestAPI<any>('containerizer/baseimage', {
-            body: JSON.stringify({
-                image: value
-            }),
-            method: 'POST'
-        });
+        // console.log('value: '+value);
+        // await requestAPI<any>('containerizer/baseimage', {
+        //     body: JSON.stringify({
+        //         image: value
+        //     }),
+        //     method: 'POST'
+        // });
         this.state.currentCell.base_image = value
         this.setState({ baseImageSelected: true });
-        console.log(`currentCell: ${JSON.stringify(this.state.currentCell)}`)
+        // console.log(`currentCell: ${JSON.stringify(this.state.currentCell)}`)
     };
 
     extractor = async (notebookModel: INotebookModel, save = false) => {
@@ -179,7 +179,7 @@ export class CellTracker extends React.Component<IProps, IState> {
             this.cellPreviewRef.current.updateChart(extractedCell['chart_obj']);
 
             const end_ts = performance.now()
-            console.log(`Extracted cell: ${JSON.stringify(extractedCell)}`);
+            // console.log(`Extracted cell: ${JSON.stringify(extractedCell)}`);
             console.log('extractor' + ' done in ' + (end_ts - begin_ts) + 'ms');
         } catch (error) {
             console.log(error);
